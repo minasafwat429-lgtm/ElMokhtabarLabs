@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المختبر - إدارة الفحوصات</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--color-deep-navy);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar a {
+            color: #bbb;
+            text-decoration: none;
+            padding: 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            transition: 0.3s;
+            display: block;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: var(--color-royal-blue);
+            color: #fff;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            background: #f0f4f8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        th,
+        td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: var(--color-royal-blue);
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            border: 1px solid #888;
+            width: 50%;
+            border-radius: 10px;
+            padding: 30px;
+            position: relative;
+        }
+
+        .close {
+            color: #aaa;
+            float: left;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: var(--font-main);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="assets/js/dna-scene.js"></script>
+
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <h2 style="text-align: center; margin-bottom: 40px; color: var(--color-medical-teal);">لوحة التحكم</h2>
+            <nav>
+                <a href="admin-dashboard.html">🧑‍⚕️ المرضى</a>
+                <a href="admin-reservations.html">📅 الحجوزات</a>
+                <a href="admin-tests.html" class="active">🧪 الفحوصات</a>
+                <a href="admin-settings.html">⚙️ الإعدادات</a>
+                <a href="index.html" style="margin-top: 50px;">🚪 تسجيل خروج</a>
+            </nav>
+        </aside>
+
+        <section class="main-content">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h1>قائمة الفحوصات</h1>
+                <button class="btn btn-secondary" onclick="openModal()">+ إضافة فحص</button>
+            </header>
+
+            <table id="testsTable">
+                <thead>
+                    <tr>
+                        <th>اسم الفحص</th>
+                        <th>السعر</th>
+                        <th>الشروط (الصيام)</th>
+                        <th>وصف مختصر</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- JS will fill this -->
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <!-- Modal -->
+    <div id="testModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle" style="margin-bottom: 20px; color: var(--color-royal-blue);">إضافة فحص</h2>
+            <form id="testForm">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label>اسم الفحص</label>
+                    <input type="text" id="tName" required>
+                </div>
+                <div class="form-group">
+                    <label>السعر</label>
+                    <input type="text" id="tPrice" placeholder="مثال: 150 ج.م" required>
+                </div>
+                <div class="form-group">
+                    <label>شروط التحليل</label>
+                    <input type="text" id="tReq" placeholder="مثال: صيام 8 ساعات">
+                </div>
+                <div class="form-group">
+                    <label>وصف</label>
+                    <textarea id="tDesc" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">حفظ</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        // Helper for Auth Header
+        function getHeaders() {
+            const token = localStorage.getItem('token');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
+
+        async function renderTable() {
+            try {
+                // Public or Admin endpoint? Tests are public in my design, but editing is admin.
+                // Viewing logic currently in admin page.
+                const response = await fetch(`${API_URL}/tests/all`);
+                const tests = await response.json();
+
+                const tbody = document.querySelector('#testsTable tbody');
+                tbody.innerHTML = '';
+
+                tests.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${t.name}</td>
+                        <td>${t.price} ج.م</td>
+                        <td>${t.category || '-'}</td>
+                        <td>${t.description || '-'}</td>
+                        <td>
+                             <button class="btn" style="padding: 5px 10px; background: #f1c40f; color:#fff;" onclick="editTest('${t.id}')">تعديل</button>
+                             <button class="btn" style="padding: 5px 10px; background: #e74c3c; color:#fff;" onclick="deleteTest('${t.id}')">حذف</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Error fetching tests:', error);
+            }
+        }
+
+        function openModal() {
+            document.getElementById('testModal').style.display = 'block';
+            document.getElementById('modalTitle').innerText = 'إضافة فحص';
+            document.getElementById('testForm').reset();
+            document.getElementById('editId').value = '';
+        }
+
+        function closeModal() {
+            document.getElementById('testModal').style.display = 'none';
+        }
+
+        async function editTest(id) {
+            // Fetch single test or find in list? The list API returns full objects.
+            // Let's just find from the DOM or fetch all again. fetching all is safer for now.
+            try {
+                const response = await fetch(`${API_URL}/tests/all`);
+                const tests = await response.json();
+                const t = tests.find(x => x.id == id);
+
+                if (t) {
+                    openModal();
+                    document.getElementById('modalTitle').innerText = 'تعديل فحص';
+                    document.getElementById('tName').value = t.name;
+                    document.getElementById('tPrice').value = t.price;
+                    document.getElementById('tReq').value = t.category; // Mapping 'req' to 'category' for now or description? 
+                    // User prompt had 'category', 'description', 'price'. 
+                    // Frontend has 'req' (Requirements). Backend has 'category'. 
+                    // I will map frontend 'req' to backend 'category' to avoid UI changes, or description?
+                    // Let's use Category for Req input for now.
+                    document.getElementById('tReq').value = t.category;
+                    document.getElementById('tDesc').value = t.description;
+                    document.getElementById('editId').value = t.id;
+                }
+            } catch (error) {
+                alert('Error loading test data');
+            }
+        }
+
+        async function deleteTest(id) {
+            if (confirm('حذف هذا الفحص؟')) {
+                try {
+                    const response = await fetch(`${API_URL}/tests/${id}`, {
+                        method: 'DELETE',
+                        headers: getHeaders()
+                    });
+                    if (response.ok) {
+                        renderTable();
+                    } else {
+                        alert('فشل الحذف');
+                    }
+                } catch (error) {
+                    alert('خطأ في الاتصال');
+                }
+            }
+        }
+
+        document.getElementById('testForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const name = document.getElementById('tName').value;
+            const price = document.getElementById('tPrice').value;
+            const category = document.getElementById('tReq').value;
+            const description = document.getElementById('tDesc').value;
+
+            const payload = { name, price: parseFloat(price), category, description };
+
+            try {
+                let response;
+                if (id) {
+                    response = await fetch(`${API_URL}/tests/${id}`, {
+                        method: 'PUT',
+                        headers: getHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    response = await fetch(`${API_URL}/tests/add`, {
+                        method: 'POST',
+                        headers: getHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (response.ok) {
+                    closeModal();
+                    renderTable();
+                } else {
+                    alert('فشل الحفظ');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('خطأ في النظام');
+            }
+        };
+
+        window.onclick = function (event) {
+            if (event.target == document.getElementById('testModal')) {
+                closeModal();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', renderTable);
+    </script>
+</body>
+
+</html>

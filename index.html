@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المختبر - ElMokhtabar Labs</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+
+<body>
+
+    <!-- 3D Background Container -->
+    <!-- 3D Background Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Intro Overlay -->
+    <div class="container flex-center" style="min-height: 100vh; position: relative; z-index: 10;">
+        <div class="glass-card text-center anim-fade-up" style="max-width: 600px; width: 100%;">
+
+            <div class="logo-container mb-20">
+                <h1 style="color: var(--color-primary); margin-bottom: 5px;">المختبر</h1>
+                <h2 style="font-size: 1.5rem; color: var(--color-secondary); font-weight: 300; letter-spacing: 2px;">
+                    ElMokhtabar Labs
+                </h2>
+            </div>
+
+            <p style="font-size: 1.1rem; color: #ddd; margin-bottom: 30px;">
+                دقة في التحليل... سرعة في النتائج. <br>
+                مختبرك الأول للرعاية الصحية المتكاملة.
+            </p>
+
+            <div class="flex flex-column gap-20">
+                <div class="flex gap-20" style="justify-content: center; flex-wrap: wrap;">
+                    <a href="patient-booking.html" class="btn btn-primary" style="min-width: 200px;">
+                        📅 حجز موعد
+                    </a>
+                    <a href="patient-results.html" class="btn btn-secondary" style="min-width: 200px;">
+                        📄 نتائج التحاليل
+                    </a>
+                </div>
+
+                <div class="mt-20 delay-200 anim-fade-up">
+                    <a href="login.html"
+                        style="color: var(--color-text-muted); font-size: 0.9rem; border-bottom: 1px dotted var(--color-text-muted);">
+                        🔐 دخول الأطباء والإداريين
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/dna-scene.js"></script>
+</body>
+
+</html>

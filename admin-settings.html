@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المختبر - الإعدادات</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--color-deep-navy);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar a {
+            color: #bbb;
+            text-decoration: none;
+            padding: 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            transition: 0.3s;
+            display: block;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: var(--color-royal-blue);
+            color: #fff;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            background: #f0f4f8;
+        }
+
+        /* Dark Mode Specifics for Settings Page Components (Global handles body) */
+        body.dark-mode .main-content {
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        body.dark-mode table {
+            background: #333;
+            color: #fff;
+            box-shadow: none;
+        }
+
+        body.dark-mode th {
+            background: #044bca;
+        }
+
+        body.dark-mode td {
+            border-bottom: 1px solid #444;
+        }
+
+        body.dark-mode .glass-card {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #444;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        th,
+        td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: var(--color-royal-blue);
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 2% auto;
+            border: 1px solid #888;
+            width: 60%;
+            border-radius: 10px;
+            padding: 30px;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        body.dark-mode .modal-content {
+            background-color: #333;
+            color: #fff;
+            border-color: #555;
+        }
+
+        .close {
+            color: #aaa;
+            float: left;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: var(--font-main);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="assets/js/dna-scene.js"></script>
+
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <h2 style="text-align: center; margin-bottom: 40px; color: var(--color-medical-teal);">لوحة التحكم</h2>
+            <nav>
+                <a href="admin-dashboard.html">🧑‍⚕️ المرضى</a>
+                <a href="admin-reservations.html">📅 الحجوزات</a>
+                <a href="admin-tests.html">🧪 الفحوصات</a>
+                <a href="admin-settings.html" class="active">⚙️ الإعدادات</a>
+                <a href="index.html" style="margin-top: 50px;">🚪 تسجيل خروج</a>
+            </nav>
+        </aside>
+
+        <section class="main-content">
+            <!-- Theme Settings -->
+            <div class="glass-card"
+                style="padding: 20px; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3>المظهر (Theme)</h3>
+                    <p style="opacity: 0.7; font-size: 0.9rem;">التبديل بين الوضع الفاتح والداكن</p>
+                </div>
+                <button id="themeToggleBtn" class="btn btn-secondary" onclick="toggleTheme()">الوضع الداكن 🌙</button>
+            </div>
+
+            <!-- Doctors Management -->
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h1>إدارة الأطباء وطاقم العمل</h1>
+                <button class="btn btn-secondary" onclick="openModal()">+ إضافة طبيب</button>
+            </header>
+
+            <div style="overflow-x: auto;">
+                <table id="doctorsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>الاسم</th>
+                            <th>التخصص</th>
+                            <th>السن</th>
+                            <th>سنوات الخبرة</th>
+                            <th>المسمى الوظيفي</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- JS -->
+                    </tbody>
+                </table>
+            </div>
+            <p id="noDocMsg" style="text-align: center; margin-top: 20px; display: none;">لا يوجد أطباء مسجلين</p>
+        </section>
+    </div>
+
+    <!-- Modal -->
+    <div id="docModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle" style="margin-bottom: 20px; color: var(--color-royal-blue);">إضافة طبيب</h2>
+            <form id="docForm">
+                <input type="hidden" id="editId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>الاسم الثلاثي</label>
+                        <input type="text" id="dName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>السن</label>
+                        <input type="number" id="dAge" required>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>التخصص</label>
+                        <input type="text" id="dSpec" required>
+                    </div>
+                    <div class="form-group">
+                        <label>سنوات الخبرة</label>
+                        <input type="number" id="dXP" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>العنوان</label>
+                    <input type="text" id="dAddress" required>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>الرقم القومي</label>
+                        <input type="text" id="dNID" required>
+                    </div>
+                    <div class="form-group">
+                        <label>الرقم الوظيفي (ID)</label>
+                        <input type="text" id="dSysID" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>المسمى الوظيفي (Position)</label>
+                    <input type="text" id="dPos" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">حفظ</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        // Helper for Auth Header
+        function getHeaders() {
+            const token = localStorage.getItem('token');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
+
+        // --- Theme Logic ---
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('labTheme', isDark ? 'dark' : 'light');
+            updateThemeBtn(isDark);
+        }
+
+        function updateThemeBtn(isDark) {
+            const btn = document.getElementById('themeToggleBtn');
+            if (isDark) {
+                btn.innerText = 'الوضع الفاتح ☀️';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.innerText = 'الوضع الداكن 🌙';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            }
+        }
+
+        // --- Doctors Logic ---
+        async function renderTable() {
+            try {
+                const response = await fetch(`${API_URL}/admin/doctors`, { headers: getHeaders() });
+                const doctors = await response.json();
+
+                const tbody = document.querySelector('#doctorsTable tbody');
+                const noData = document.getElementById('noDocMsg');
+                tbody.innerHTML = '';
+
+                if (doctors.length === 0) {
+                    noData.style.display = 'block';
+                } else {
+                    noData.style.display = 'none';
+                    doctors.forEach(d => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${d.sysID}</td>
+                            <td>${d.name}</td>
+                            <td>${d.spec}</td>
+                            <td>${d.age}</td>
+                            <td>${d.xp}</td>
+                            <td>${d.pos}</td>
+                            <td>
+                                 <button class="btn" style="padding: 5px 10px; background: #f1c40f; color:#fff;" onclick="editDoc('${d.sysID}')">تعديل</button>
+                                 <button class="btn" style="padding: 5px 10px; background: #e74c3c; color:#fff;" onclick="deleteDoc('${d.sysID}')">حذف</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        function openModal() {
+            document.getElementById('docModal').style.display = 'block';
+            document.getElementById('modalTitle').innerText = 'إضافة طبيب';
+            document.getElementById('docForm').reset();
+            document.getElementById('editId').value = '';
+        }
+
+        function closeModal() {
+            document.getElementById('docModal').style.display = 'none';
+        }
+
+        async function editDoc(sysID) {
+            try {
+                // Fetch list and find? 
+                const response = await fetch(`${API_URL}/admin/doctors`, { headers: getHeaders() });
+                const doctors = await response.json();
+                const d = doctors.find(x => x.sysID === sysID);
+
+                if (d) {
+                    openModal();
+                    document.getElementById('modalTitle').innerText = 'تعديل بيانات طبيب';
+                    document.getElementById('dName').value = d.name;
+                    document.getElementById('dAge').value = d.age;
+                    document.getElementById('dSpec').value = d.spec;
+                    document.getElementById('dXP').value = d.xp;
+                    document.getElementById('dAddress').value = d.address;
+                    document.getElementById('dNID').value = d.nid;
+                    document.getElementById('dSysID').value = d.sysID;
+                    document.getElementById('dPos').value = d.pos;
+                    document.getElementById('editId').value = d.sysID;
+                }
+            } catch (error) {
+                alert('Error loading doctor data');
+            }
+        }
+
+        async function deleteDoc(sysID) {
+            if (confirm('حذف هذا الطبيب؟')) {
+                try {
+                    const response = await fetch(`${API_URL}/admin/doctor/sys/${sysID}`, {
+                        method: 'DELETE',
+                        headers: getHeaders()
+                    });
+                    if (response.ok) {
+                        renderTable();
+                    } else {
+                        alert('فشل الحذف');
+                    }
+                } catch (error) {
+                    alert('خطأ في الاتصال');
+                }
+            }
+        }
+
+        document.getElementById('docForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const editKey = document.getElementById('editId').value;
+
+            const sysID = document.getElementById('dSysID').value;
+            const payload = {
+                name: document.getElementById('dName').value,
+                age: document.getElementById('dAge').value,
+                spec: document.getElementById('dSpec').value,
+                xp: document.getElementById('dXP').value,
+                address: document.getElementById('dAddress').value,
+                nid: document.getElementById('dNID').value,
+                sysID: sysID,
+                pos: document.getElementById('dPos').value,
+            };
+
+            try {
+                let response;
+                if (editKey) {
+                    // Update
+                    response = await fetch(`${API_URL}/admin/doctor/sys/${editKey}`, {
+                        method: 'PUT',
+                        headers: getHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    // Create
+                    response = await fetch(`${API_URL}/admin/doctor`, {
+                        method: 'POST',
+                        headers: getHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (response.ok) {
+                    closeModal();
+                    renderTable();
+                } else {
+                    alert('فشل الحفظ');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('خطأ');
+            }
+        };
+
+        window.onclick = function (event) {
+            if (event.target == document.getElementById('docModal')) {
+                closeModal();
+            }
+        }
+
+        // Init Theme on Load
+        document.addEventListener('DOMContentLoaded', () => {
+            const theme = localStorage.getItem('labTheme');
+            if (theme === 'dark') {
+                document.body.classList.add('dark-mode');
+                updateThemeBtn(true);
+            }
+            renderTable();
+        });
+
+    </script>
+</body>
+
+</html>

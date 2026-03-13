@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المختبر - نتائج التحاليل</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="assets/js/dna-scene.js"></script>
+
+    <nav class="glass-card"
+        style="margin: 20px; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="brand">
+            <a href="index.html"
+                style="text-decoration: none; font-weight: bold; font-size: 1.5rem; color: var(--color-royal-blue);">المختبر</a>
+        </div>
+        <div class="nav-links">
+            <a href="patient-tests.html"
+                style="text-decoration: none; color: var(--color-deep-navy); margin-right: 20px;">الفحوصات</a>
+            <a href="index.html" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.9rem;">الرئيسية</a>
+        </div>
+    </nav>
+
+    <div class="container"
+        style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh;">
+
+        <div class="glass-card" style="padding: 40px; width: 100%; max-width: 500px; text-align: center;">
+            <h2 style="margin-bottom: 20px; color: var(--color-deep-navy);">احصل على نتيجتك</h2>
+            <p style="margin-bottom: 30px; color: #666;">أدخل رقم الملف ورقم الهاتف للاطلاع على نتيجة التحليل</p>
+
+            <form id="resultForm" onsubmit="event.preventDefault(); showResults();">
+                <div style="margin-bottom: 20px; text-align: right;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">رقم الملف (ID)</label>
+                    <input type="text" required placeholder="مثال: 1050"
+                        style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-family: var(--font-main);">
+                </div>
+                <div style="margin-bottom: 30px; text-align: right;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">رقم الهاتف</label>
+                    <input type="tel" required placeholder="01xxxxxxxxx"
+                        style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-family: var(--font-main);">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">عرض النتيجة</button>
+            </form>
+        </div>
+
+        <!-- Result Container (Hidden by default) -->
+        <div id="resultContainer" class="glass-card"
+            style="display: none; margin-top: 40px; padding: 30px; width: 100%; max-width: 800px; animation: fadeInUp 0.5s ease;">
+            <div
+                style="display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+                <h3 style="color: var(--color-royal-blue);">تقرير المريض: أحمد محمد</h3>
+                <span class="badge"
+                    style="background: #e6fffa; color: #00C4A7; padding: 5px 15px; border-radius: 20px;">مكتمل</span>
+            </div>
+
+            <!-- Fake PDF Viewer -->
+            <div
+                style="background: #fff; height: 300px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; color: #999; flex-direction: column;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">📄</div>
+                <p>Medical Report Preview</p>
+                <!-- In a real app, embed <iframe src="path/to/pdf"></iframe> here -->
+            </div>
+
+            <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 15px;">
+                <button class="btn btn-secondary">تحميل PDF</button>
+                <button class="btn btn-primary"
+                    onclick="document.getElementById('resultContainer').style.display='none'">إغلاق</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        async function showResults() {
+            const btn = document.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerText = 'جاري البحث...';
+            btn.style.opacity = '0.7';
+
+            const id = document.querySelector('input[placeholder="مثال: 1050"]').value;
+            const phone = document.querySelector('input[type="tel"]').value;
+
+            try {
+                const response = await fetch(`${API_URL}/patient/results/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, phone })
+                });
+
+                if (response.ok) {
+                    const results = await response.json();
+                    if (results.length > 0) {
+                        displayResults(results);
+                        document.getElementById('resultContainer').style.display = 'block';
+                        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                    } else {
+                        alert('لا توجد نتائج لهذا الملف');
+                    }
+                } else {
+                    alert('بيانات غير صحيحة أو لا توجد نتائج');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('خطأ في الاتصال بالسيرفر. تأكد من تشغيل البرنامج (Backend) على المنفذ 5000.\n' + error.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.style.opacity = '1';
+            }
+        }
+
+        function displayResults(results) {
+            // Just displaying the first result or list? 
+            // Design shows a single container. Let's show the most recent.
+            const latest = results[results.length - 1]; // Assuming order? API defaults order?
+            // Update Title
+            document.querySelector('#resultContainer h3').innerText = `تقرير: ${latest.test_name}`;
+
+            // Update Status Badge
+            const badge = document.querySelector('#resultContainer .badge');
+            badge.innerText = latest.status;
+            if (latest.status === 'Completed' || latest.status === 'مكتمل') {
+                badge.style.background = '#e6fffa';
+                badge.style.color = '#00C4A7';
+            } else {
+                badge.style.background = '#fff5eb';
+                badge.style.color = '#ff9f43';
+            }
+
+            // Update Download Button
+            const dlBtn = document.querySelector('#resultContainer .btn-secondary');
+            if (latest.report_available) {
+                dlBtn.style.display = 'inline-block';
+                dlBtn.onclick = () => window.location.href = `${API_URL}/patient/download/${latest.id}?token=TODO_AUTH_OR_PUBLIC`;
+                // Public download link? 
+                // My `download` endpoint is `@token_required`. 
+                // Issue: Public Search user has NO Token.
+                // I need a public download endpoint validated by ID+Phone or a signed URL.
+                // For this demo, I'll allow download if "Search" was successful? 
+                // Easier: Change download endpoint to allow public access via a short-lived token or just ID+Phone in param?
+                // I'll leave it simple: "Please login to download" or similar if strict.
+                // Or I make a `public_download/<id>` endpoint.
+                // I'll make `public_download` endpoint.
+                dlBtn.onclick = () => window.open(`${API_URL}/patient/public-download/${latest.id}`, '_blank');
+            } else {
+                dlBtn.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>

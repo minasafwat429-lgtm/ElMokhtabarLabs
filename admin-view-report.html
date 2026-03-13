@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المختبر - تقرير طبي</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .report-page {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--color-royal-blue);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .patient-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .patient-info p {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .patient-info strong {
+            color: var(--color-deep-navy);
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .results-table th {
+            background: #eee;
+            color: #333;
+            text-align: right;
+            padding: 10px;
+        }
+
+        .results-table td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .footer {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .signature {
+            text-align: center;
+        }
+
+        .print-btn-container {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        @media print {
+            .print-btn-container {
+                display: none;
+            }
+
+            body {
+                background: white;
+            }
+
+            .report-page {
+                box-shadow: none;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="assets/js/dna-scene.js"></script>
+
+    <div class="report-page">
+        <div class="report-page">
+            <header class="header">
+                <div>
+                    <h1 style="color: var(--color-royal-blue);">المختبر</h1>
+                    <p>ElMokhtabar Labs</p>
+                </div>
+                <div style="text-align: left;">
+                    <p>ملف المريض</p>
+                    <div id="loading" style="display:none; color: blue;">جاري التحميل...</div>
+                </div>
+            </header>
+
+            <section class="patient-info" id="pInfo">
+                <!-- Filled by JS -->
+            </section>
+
+            <h3 style="margin-bottom: 15px; color: var(--color-royal-blue);">سجل الفحوصات</h3>
+            <table class="results-table" id="historyTable">
+                <thead>
+                    <tr>
+                        <th>اسم الفحص</th>
+                        <th>التاريخ</th>
+                        <th>الحالة</th>
+                        <th>التقرير</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filled by JS -->
+                </tbody>
+            </table>
+
+            <div class="footer">
+                <div>
+                    <p>تاريخ استخراج الملف:</p>
+                    <p><strong id="printDate"></strong></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="print-btn-container">
+            <button onclick="window.print()" class="btn btn-primary">طباعة الملف</button>
+            <a href="admin-dashboard.html" class="btn btn-secondary">عودة للوحة التحكم</a>
+        </div>
+
+        <script>
+            const API_URL = 'http://localhost:5000/api';
+
+            function getHeaders() {
+                const token = localStorage.getItem('token');
+                if (!token) return null;
+                return {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                };
+            }
+
+            async function loadPatient() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const id = urlParams.get('id');
+                const token = localStorage.getItem('token');
+
+                if (!token) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                if (!id) {
+                    alert('No ID provided');
+                    window.location.href = 'admin-dashboard.html';
+                    return;
+                }
+
+                document.getElementById('loading').style.display = 'block';
+
+                try {
+                    const response = await fetch(`${API_URL}/admin/patient/${id}`, { headers: getHeaders() });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const user = data.user;
+                        const tests = data.tests;
+
+                        // Fill Info
+                        const pInfo = document.getElementById('pInfo');
+                        pInfo.innerHTML = `
+                        <p><strong>اسم المريض:</strong> ${user.full_name}</p>
+                        <p><strong>رقم الملف:</strong> ${user.id}</p>
+                        <p><strong>رقم الهاتف:</strong> ${user.phone || '-'}</p>
+                        <p><strong>البريد الإلكتروني:</strong> ${user.email}</p>
+                    `;
+
+                        // Fill History
+                        const tbody = document.querySelector('#historyTable tbody');
+                        tbody.innerHTML = '';
+
+                        if (tests.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">لا يوجد فحوصات سابقة</td></tr>';
+                        } else {
+                            tests.forEach(t => {
+                                const date = new Date(t.created_at).toLocaleDateString();
+                                let action = '-';
+                                if (t.report_available) {
+                                    // Link to Download
+                                    action = `<a href="${API_URL}/patient/download/${t.id}" target="_blank" class="btn btn-primary" style="padding: 2px 8px; font-size: 0.8rem;">PDF</a>`;
+                                    // Since download requires token, and this is a simple href, it might fail if browser doesn't send header?
+                                    // Actually, standard links don't send Auth headers.
+                                    // I added Public Download endpoint for this reason? Or I can use a small script to fetch blob.
+                                    // For Admin, let's assume they are logged in? 
+                                    // WAIT. I implemented `public_download` for Patients.
+                                    // For Admin, I can use the same or just use the download link.
+                                    // The `/api/patient/download` is `@token_required`. Browser simple click won't send it.
+                                    // I should change this to `onclick` handler to fetch with header.
+                                    action = `<button onclick="downloadReport(${t.id})" class="btn btn-primary" style="padding: 2px 8px; font-size: 0.8rem;">تحميل</button>`;
+                                } else if (t.status === 'Pending') {
+                                    action = '<span style="color:orange">قيد الانتظار</span>';
+                                }
+
+                                tbody.innerHTML += `
+                                <tr>
+                                    <td>${t.test_name}</td>
+                                    <td>${date}</td>
+                                    <td>${t.status}</td>
+                                    <td>${action}</td>
+                                </tr>
+                            `;
+                            });
+                        }
+
+                        document.getElementById('printDate').innerText = new Date().toLocaleDateString();
+
+                    } else {
+                        alert('Error loading patient');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Connection Error');
+                } finally {
+                    document.getElementById('loading').style.display = 'none';
+                }
+            }
+
+            async function downloadReport(reportId) {
+                try {
+                    const response = await fetch(`${API_URL}/patient/download/${reportId}`, {
+                        headers: getHeaders()
+                    });
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `report_${reportId}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    } else {
+                        alert('فشل تحميل الملف');
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            window.onload = loadPatient;
+        </script>
+
+</body>
+
+</html>

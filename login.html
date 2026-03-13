@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - المختبر</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body>
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+
+    <div class="container flex-center" style="min-height: 100vh;">
+        <div class="glass-card anim-fade-up" style="max-width: 450px; width: 100%; position: relative; z-index: 10;">
+
+            <div class="text-center mb-20">
+                <h2 style="color: var(--color-primary);">مرحباً بك</h2>
+                <p>سجل الدخول للمتابعة</p>
+            </div>
+
+            <!-- Toggle Buttons -->
+            <div class="flex gap-10 mb-20"
+                style="background: rgba(0,0,0,0.2); padding: 5px; border-radius: var(--radius-full);">
+                <button id="showLoginBtn" class="btn btn-primary" style="flex: 1; box-shadow: none;"
+                    onclick="toggleForm('login')">تسجيل دخول</button>
+                <button id="showRegisterBtn" class="btn" style="flex: 1; color: var(--color-text-muted);"
+                    onclick="toggleForm('register')">خساب جديد</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-20">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" id="loginEmail" placeholder="example@mail.com"
+                        onblur="validateInput(this, 'email')">
+                </div>
+
+                <div class="mb-20">
+                    <label>كلمة المرور</label>
+                    <input type="password" id="loginPassword" placeholder="******"
+                        onblur="validateInput(this, 'required')">
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">دخول</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" style="display: none;" onsubmit="handleRegister(event)">
+                <div class="mb-20">
+                    <label>الاسم الكامل</label>
+                    <input type="text" id="regName" placeholder="الاسم ثلاثي" onblur="validateInput(this, 'name')">
+                </div>
+
+                <div class="mb-20">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" id="regEmail" placeholder="example@mail.com"
+                        onblur="validateInput(this, 'email')">
+                </div>
+
+                <div class="mb-20">
+                    <label>رقم الهاتف</label>
+                    <input type="text" id="regPhone" placeholder="01xxxxxxxxx" onblur="validateInput(this, 'phone')">
+                </div>
+
+                <div class="mb-20">
+                    <label>كلمة المرور</label>
+                    <input type="password" id="regPassword" placeholder="6 أحرف على الأقل"
+                        onblur="validateInput(this, 'password')">
+                </div>
+
+                <button type="submit" class="btn btn-secondary" style="width: 100%;">إنشاء حساب</button>
+            </form>
+
+            <!-- Feedback Messages -->
+            <div id="msgBox" class="mt-20 text-center"
+                style="display: none; padding: 10px; border-radius: var(--radius-sm);"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="assets/js/dna-scene.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/main.js"></script>
+
+    <script>
+        // Form Toggle Logic
+        function toggleForm(type) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const loginBtn = document.getElementById('showLoginBtn');
+            const regBtn = document.getElementById('showRegisterBtn');
+            const msgBox = document.getElementById('msgBox');
+
+            msgBox.style.display = 'none';
+
+            if (type === 'login') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                loginBtn.classList.add('btn-primary');
+                loginBtn.style.color = 'white';
+                regBtn.classList.remove('btn-primary');
+                regBtn.style.color = 'var(--color-text-muted)';
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                regBtn.classList.add('btn-primary');
+                regBtn.style.color = 'white';
+                loginBtn.classList.remove('btn-primary');
+                loginBtn.style.color = 'var(--color-text-muted)';
+            }
+        }
+
+        // Helper to show messages
+        function showMessage(text, type) {
+            const box = document.getElementById('msgBox');
+            box.style.display = 'block';
+            box.innerText = text;
+            if (type === 'error') {
+                box.style.background = 'rgba(231, 76, 60, 0.2)';
+                box.style.color = '#e74c3c';
+                box.style.border = '1px solid #e74c3c';
+            } else {
+                box.style.background = 'rgba(46, 204, 113, 0.2)';
+                box.style.color = '#2ecc71';
+                box.style.border = '1px solid #2ecc71';
+            }
+        }
+
+        // Login Handler
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail');
+            const password = document.getElementById('loginPassword');
+
+            if (!validateInput(email, 'email') || !validateInput(password, 'required')) return;
+
+            const res = await ApiService.post('/auth/login', {
+                email: email.value,
+                password: password.value
+            });
+
+            if (res.success) {
+                localStorage.setItem('token', res.data.token);
+                localStorage.setItem('user', JSON.stringify(res.data.user));
+                showMessage('تم تسجيل الدخول بنجاح', 'success');
+                setTimeout(() => {
+                    window.location.href = res.data.user.role === 'admin' ? 'admin-dashboard.html' : 'patient-tests.html';
+                }, 1000);
+            } else {
+                showMessage(res.message, 'error');
+            }
+        }
+
+        // Register Handler
+        async function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('regName');
+            const email = document.getElementById('regEmail');
+            const phone = document.getElementById('regPhone');
+            const password = document.getElementById('regPassword');
+
+            if (!validateInput(name, 'name') || !validateInput(email, 'email') ||
+                !validateInput(phone, 'phone') || !validateInput(password, 'password')) return;
+
+            const res = await ApiService.post('/auth/register', {
+                full_name: name.value,
+                email: email.value,
+                phone: phone.value,
+                password: password.value,
+                role: 'patient'
+            });
+
+            if (res.success) {
+                localStorage.setItem('token', res.data.token);
+                localStorage.setItem('user', JSON.stringify(res.data.user));
+                showMessage('تم إنشاء الحساب بنجاح! جاري التوجيه...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'patient-tests.html';
+                }, 1500);
+            } else {
+                showMessage(res.message, 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المختبر - لوحة تحكم الطبيب</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--color-deep-navy);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar a {
+            color: #bbb;
+            text-decoration: none;
+            padding: 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            transition: 0.3s;
+            display: block;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: var(--color-royal-blue);
+            color: #fff;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            background: #f0f4f8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        th,
+        td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: var(--color-royal-blue);
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            pad: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            border-radius: 10px;
+            padding: 30px;
+            position: relative;
+        }
+
+        .close {
+            color: #aaa;
+            float: left;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="assets/js/dna-scene.js"></script>
+
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2 style="text-align: center; margin-bottom: 40px; color: var(--color-medical-teal);">لوحة التحكم</h2>
+            <nav>
+                <a href="admin-dashboard.html" class="active">🧑‍⚕️ المرضى</a>
+                <a href="admin-reservations.html">📅 الحجوزات</a>
+                <a href="admin-tests.html">🧪 الفحوصات</a>
+                <a href="admin-settings.html">⚙️ الإعدادات</a>
+                <a href="index.html" style="margin-top: 50px;">🚪 تسجيل خروج</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <section class="main-content">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h1>قائمة المرضى المسجلين</h1>
+                <div>
+                    <button class="btn btn-secondary" onclick="openModal()" style="margin-left: 20px;">+ إضافة
+                        مريض</button>
+                    <div class="user-info" style="display: inline-block;">
+                        <span>د. خالد أحمد</span>
+                        <div
+                            style="display: inline-block; width: 40px; height: 40px; background: #ddd; border-radius: 50%; margin-right: 10px; vertical-align: middle;">
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="table-container">
+                <table id="patientsTable">
+                    <thead>
+                        <tr>
+                            <th>رقم الملف</th>
+                            <th>الاسم</th>
+                            <th>العمر/الميلاد</th>
+                            <th>رقم الهاتف</th>
+                            <th>آخر فحص</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- JS fills this -->
+                    </tbody>
+                </table>
+                <p id="noDataMsg" style="text-align: center; margin-top: 20px; color: #777; display: none;">لا يوجد مرضى
+                    مسجلين</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- CRUD Modal -->
+    <div id="patientModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle" style="margin-bottom: 20px; color: var(--color-royal-blue);">إضافة مريض جديد</h2>
+            <form id="patientForm">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label>اسم المريض</label>
+                    <input type="text" id="mName" required>
+                </div>
+                <div class="form-group">
+                    <label>تاريخ الميلاد</label>
+                    <input type="date" id="mDob" required>
+                </div>
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="tel" id="mPhone" required>
+                </div>
+                <div class="form-group">
+                    <label>آخر فحص (اختياري)</label>
+                    <input type="text" id="mTest" placeholder="مثال: CBC">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">حفظ
+                    البيانات</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        // Helper for Auth Header
+        function getHeaders() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return; // Stop execution
+            }
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
+
+        // Logout
+        document.querySelector('a[href="index.html"][style*="margin-top"]').onclick = (e) => {
+            e.preventDefault();
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+        };
+
+        // --- Patients Logic ---
+        async function renderTable() {
+            try {
+                const response = await fetch(`${API_URL}/admin/patients`, { headers: getHeaders() });
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const patients = await response.json();
+                const tbody = document.querySelector('#patientsTable tbody');
+                const noData = document.getElementById('noDataMsg');
+
+                tbody.innerHTML = '';
+
+                if (patients.length === 0) {
+                    noData.style.display = 'block';
+                } else {
+                    noData.style.display = 'none';
+                    patients.forEach(p => {
+                        // Calculate age from DOB? Model doesn't have DOB currently, only phone/email/name.
+                        // I will display what we have. API returns: id, full_name, email, phone.
+                        // I'll assume DOB is missing for now or use placeholder. 
+                        // Wait, my User model only has `full_name`, `email`, `phone`, `password`, `role`.
+                        // The user request said "User Model: id, full_name, email, phone, password, role".
+                        // It DOES NOT have DOB.
+                        // I will remove DOB calculation or leave it empty.
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${p.id}</td>
+                            <td>${p.full_name}</td>
+                            <td>-</td>
+                            <td>${p.phone || '-'}</td>
+                            <td>-</td>
+                            <td>
+                                <a href="admin-view-report.html?id=${p.id}" class="btn btn-primary" style="padding: 5px 10px; font-size: 0.8rem;">عرض</a>
+                                <!-- Edit/Delete not fully supported in backend for User model yet, hiding or implementing stub -->
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        // --- CRUD Actions (Frontend Only Mock for now strictly for Patients? No, I should use API) ---
+        // My Admin API `list_patients` is implemented.
+        // `add_patient` (Register) is implemented in Auth.
+        // I should wire "Add Patient" to use `/api/auth/register`?
+        // Or `/api/admin/patient`? 
+        // Admin usually shouldn't register patients with passwords? 
+        // For now, I'll wire "Add Patient" to register a new user with default password?
+        // Actually, the `pationtForm` asks for Name, DOB, Phone. 
+        // I will implement a restricted functionality or just fetch list for now.
+        // The Prompt asked: "Admin Features: List All Patients". It didn't explicitly accept "Create Patient" for admin.
+        // But "full backend system... connect with previously built frontend".
+        // The Admin Dashboard HAS "Add Patient". 
+        // I will implement a quick "Add Patient" logic that calls `/api/auth/register` with random password.
+
+        async function openModal() {
+            document.getElementById('patientModal').style.display = 'block';
+            document.getElementById('modalTitle').innerText = 'إضافة مريض جديد';
+            document.getElementById('patientForm').reset();
+            document.getElementById('editId').value = '';
+        }
+
+        function closeModal() {
+            document.getElementById('patientModal').style.display = 'none';
+        }
+
+        document.getElementById('patientForm').onsubmit = async (e) => {
+            e.preventDefault();
+            // This form has DOB/LastTest which aren't in User model. 
+            // I will ignore extra fields to stay within User Model spec given in prompt.
+            const name = document.getElementById('mName').value;
+            const phone = document.getElementById('mPhone').value;
+            // Email is required for Register, but form doesn't have it.
+            // I will generate a dummy email based on phone/name?
+            const email = `${phone}@lab.com`;
+
+            try {
+                const response = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: name,
+                        email: email,
+                        phone: phone,
+                        password: 'defaultPassword123', // Admin created
+                        role: 'patient'
+                    })
+                });
+
+                if (response.ok) {
+                    alert(`تم إضافة المريض.\nEmail: ${email}\nPass: defaultPassword123`);
+                    closeModal();
+                    renderTable();
+                } else {
+                    const d = await response.json();
+                    alert(d.message || 'فشل الإضافة');
+                }
+            } catch (err) {
+                alert('Connection Error');
+            }
+        };
+
+        // Window Click to Close
+        window.onclick = function (event) {
+            if (event.target == document.getElementById('patientModal')) {
+                closeModal();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', renderTable);
+    </script>
+</body>
+
+</html>

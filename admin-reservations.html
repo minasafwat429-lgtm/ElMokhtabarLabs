@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المختبر - إدارة الحجوزات</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: var(--color-deep-navy);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar a {
+            color: #bbb;
+            text-decoration: none;
+            padding: 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            transition: 0.3s;
+            display: block;
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: var(--color-royal-blue);
+            color: #fff;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            background: #f0f4f8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        th,
+        td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: var(--color-royal-blue);
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            border: 1px solid #888;
+            width: 50%;
+            border-radius: 10px;
+            padding: 30px;
+            position: relative;
+        }
+
+        .close {
+            color: #aaa;
+            float: left;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: var(--font-main);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="assets/js/dna-scene.js"></script>
+
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <h2 style="text-align: center; margin-bottom: 40px; color: var(--color-medical-teal);">لوحة التحكم</h2>
+            <nav>
+                <a href="admin-dashboard.html">🧑‍⚕️ المرضى</a>
+                <a href="admin-reservations.html" class="active">📅 الحجوزات</a>
+                <a href="admin-tests.html">🧪 الفحوصات</a>
+                <a href="admin-settings.html">⚙️ الإعدادات</a>
+                <a href="index.html" style="margin-top: 50px;">🚪 تسجيل خروج</a>
+            </nav>
+        </aside>
+
+        <section class="main-content">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h1>إدارة الحجوزات</h1>
+                <button class="btn btn-secondary" onclick="openModal()">+ حجز جديد</button>
+            </header>
+
+            <table id="reservationsTable">
+                <thead>
+                    <tr>
+                        <th>رقم الحجز</th>
+                        <th>اسم المريض</th>
+                        <th>الفحص</th>
+                        <th>التاريخ</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- JS will fill this -->
+                </tbody>
+            </table>
+            <p id="noDataMsg" style="text-align: center; margin-top: 20px; color: #777; display: none;">لا توجد حجوزات
+                حالياً</p>
+        </section>
+    </div>
+
+    <!-- Modal -->
+    <div id="resModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle" style="margin-bottom: 20px; color: var(--color-royal-blue);">حجز جديد</h2>
+            <form id="resForm">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label>اسم المريض</label>
+                    <input type="text" id="rName" required>
+                </div>
+                <div class="form-group">
+                    <label>السن</label>
+                    <input type="number" id="rAge" required>
+                </div>
+                <div class="form-group">
+                    <label>نوع الفحص</label>
+                    <input type="text" id="rTest" required>
+                </div>
+                <div class="form-group">
+                    <label>طريقة الدفع</label>
+                    <select id="rPayment">
+                        <option value="cash">كاش</option>
+                        <option value="visa">فيزا</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>حالة الحجز</label>
+                    <select id="rStatus">
+                        <option value="جديد">جديد</option>
+                        <option value="مكتمل">مكتمل</option>
+                        <option value="ملغي">ملغي</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">حفظ</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        // Helper for Auth Header
+        function getHeaders() {
+            const token = localStorage.getItem('token');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
+
+        async function renderTable() {
+            try {
+                const response = await fetch(`${API_URL}/admin/reservations`, { headers: getHeaders() });
+                const bookings = await response.json();
+
+                const tbody = document.querySelector('#reservationsTable tbody');
+                const noDataMsg = document.getElementById('noDataMsg');
+
+                tbody.innerHTML = '';
+
+                if (bookings.length === 0) {
+                    noDataMsg.style.display = 'block';
+                } else {
+                    noDataMsg.style.display = 'none';
+                    bookings.forEach(b => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${b.id}</td>
+                            <td>${b.patient_name}</td>
+                            <td>${b.test_name}</td>
+                            <td>${new Date(b.created_at).toLocaleDateString()}</td>
+                            <td><span style="background: ${getStatusColor(b.status)}; padding: 4px 10px; border-radius: 10px;">${b.status}</span></td>
+                            <td>
+                                <button class="btn" style="padding: 5px 10px; background: #f1c40f; color:#fff;" onclick="editRes('${b.id}')">تعديل</button>
+                                <button class="btn" style="padding: 5px 10px; background: #e74c3c; color:#fff;" onclick="deleteRes('${b.id}')">حذف</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching reservations:', error);
+            }
+        }
+
+        function getStatusColor(status) {
+            if (status === 'Completed' || status === 'مكتمل') return '#e6fffa; color: #00C4A7';
+            if (status === 'Cancelled' || status === 'ملغي') return '#ffe6e6; color: #ff5b5b';
+            return '#fff5eb; color: #ff9f43'; // Pending
+        }
+
+        function openModal() {
+            document.getElementById('resModal').style.display = 'block';
+            document.getElementById('modalTitle').innerText = 'حجز جديد';
+            document.getElementById('resForm').reset();
+            document.getElementById('editId').value = '';
+        }
+
+        function closeModal() {
+            document.getElementById('resModal').style.display = 'none';
+        }
+
+        async function editRes(id) {
+            try {
+                const response = await fetch(`${API_URL}/admin/reservations`, { headers: getHeaders() });
+                const bookings = await response.json();
+                const b = bookings.find(x => x.id == id);
+
+                if (b) {
+                    openModal();
+                    document.getElementById('modalTitle').innerText = 'تعديل حجز';
+                    document.getElementById('rName').value = b.patient_name;
+                    document.getElementById('rAge').value = ''; // Age not in model, maybe fetch from Patient User details if needed? Ignoring for now.
+                    document.getElementById('rTest').value = b.test_name;
+                    document.getElementById('rPayment').value = 'cash'; // Placeholder
+                    document.getElementById('rStatus').value = b.status;
+                    document.getElementById('editId').value = b.id;
+                }
+            } catch (error) {
+                alert('Error loading booking');
+            }
+        }
+
+        async function deleteRes(id) {
+            if (confirm('حذف هذا الحجز؟')) {
+                try {
+                    const response = await fetch(`${API_URL}/admin/reservation/${id}`, {
+                        method: 'DELETE',
+                        headers: getHeaders()
+                    });
+                    if (response.ok) {
+                        renderTable();
+                    } else {
+                        alert('فشل الحذف');
+                    }
+                } catch (error) {
+                    alert('خطأ في الاتصال');
+                }
+            }
+        }
+
+        document.getElementById('resForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const name = document.getElementById('rName').value;
+            const test = document.getElementById('rTest').value;
+            const status = document.getElementById('rStatus').value;
+            // age & payment ignored as they aren't in PatientTest easily without join or expansion.
+
+            const payload = {
+                name,
+                test_name: test,
+                status
+            };
+
+            try {
+                let response;
+                if (id) {
+                    response = await fetch(`${API_URL}/admin/reservation/${id}`, {
+                        method: 'PUT',
+                        headers: getHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    response = await fetch(`${API_URL}/admin/reservation`, {
+                        method: 'POST',
+                        headers: getHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (response.ok) {
+                    closeModal();
+                    renderTable();
+                } else {
+                    alert('فشل الحفظ');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('خطأ في النظام');
+            }
+        };
+
+        window.onclick = function (event) {
+            if (event.target == document.getElementById('resModal')) {
+                closeModal();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', renderTable);
+    </script>
+</body>
+
+</html>
